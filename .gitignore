@@ -1,0 +1,72 @@
+# Python / uv
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# Test, type-checking, lint, and coverage caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.pyre/
+.pytype/
+.tox/
+.nox/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+.hypothesis/
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+!.env.sample
+.streamlit/secrets.toml
+*.pem
+*.key
+
+# Local tooling / notebooks
+.ipynb_checkpoints/
+.cache/
+.local/
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Downloaded benchmark data, embeddings, and retrieval indexes
+# Keep dataset manifests, scripts, fingerprints, and evaluation splits in Git.
+data/raw/
+data/processed/
+data/corpus/
+data/index/
+data/indexes/
+data/embeddings/
+indexes/
+.faiss/
+
+# Locally cloned upstream repositories (if placed here)
+external/
+
+# Temporary files
+.tmp/
+tmp/
+temp/
+*.tmp
+*.swp
+*.swo
+*~
+
+# NOTE: Intentionally track the following as required by the review protocol:
+# PLAN.md, AGENTS.md, MILESTONES.md, REVIEW.md, PROGRESS.md
+# eval/splits/, eval/golden.json, reports/ (including live-test logs),
+# and milestone traces/request-payload artifacts.
+# Before committing payload artifacts, inspect them for secrets/sensitive data.
+# Commit uv.lock and .python-version for reproducible builds.
