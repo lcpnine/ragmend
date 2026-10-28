@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Usage: automation/run M0 base [--print-prompts] [--reset-rounds] [--max-rounds N] ...
+set -euo pipefail
+cd "$(dirname "$0")/.."
+exec python3 automation/driver.py "$@"

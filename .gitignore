@@ -70,3 +70,7 @@ temp/
 # and milestone traces/request-payload artifacts.
 # Before committing payload artifacts, inspect them for secrets/sensitive data.
 # Commit uv.lock and .python-version for reproducible builds.
+reviews/
+
+# Milestone automation state and logs (local only)
+.automation/

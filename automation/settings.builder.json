@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Read", "Glob", "Grep", "Edit", "Write", "WebFetch", "WebSearch",
+      "Bash(python:*)", "Bash(python3:*)", "Bash(uv:*)", "Bash(pip:*)", "Bash(pytest:*)",
+      "Bash(make:*)", "Bash(ls:*)", "Bash(cat:*)", "Bash(head:*)", "Bash(tail:*)", "Bash(wc:*)",
+      "Bash(find:*)", "Bash(grep:*)", "Bash(jq:*)", "Bash(shasum:*)", "Bash(mkdir:*)",
+      "Bash(gzip:*)", "Bash(zcat:*)", "Bash(diff:*)", "Bash(sort:*)",
+      "Bash(git status:*)", "Bash(git diff:*)", "Bash(git log:*)", "Bash(git show:*)",
+      "Bash(git add:*)", "Bash(git commit:*)", "Bash(git ls-files:*)", "Bash(git rev-parse:*)",
+      "Bash(git clone:*)", "Bash(git -C external/:*)"
+    ],
+    "deny": [
+      "Read(./.env)", "Read(./.env.*)", "Edit(./.env*)", "Write(./.env*)",
+      "Bash(cat .env*)", "Bash(cat ./.env*)", "Bash(env)", "Bash(printenv:*)",
+      "Edit(./PLAN.md)", "Edit(./AGENTS.md)", "Edit(./MILESTONES.md)", "Edit(./REVIEW.md)",
+      "Edit(./.gitignore)", "Edit(./automation/**)", "Edit(./.claude/**)",
+      "Write(./PLAN.md)", "Write(./AGENTS.md)", "Write(./MILESTONES.md)", "Write(./REVIEW.md)",
+      "Write(./.gitignore)", "Write(./automation/**)", "Write(./.claude/**)",
+      "Bash(git tag:*)", "Bash(git push:*)", "Bash(git reset:*)", "Bash(git rebase:*)",
+      "Bash(git commit --amend:*)", "Bash(git checkout:*)", "Bash(git restore:*)",
+      "Bash(git filter-branch:*)", "Bash(git update-ref:*)", "Bash(rm -rf:*)", "Bash(sudo:*)",
+      "Bash(curl:*)", "Bash(wget:*)"
+    ]
+  }
+}

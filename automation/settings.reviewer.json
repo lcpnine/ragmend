@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Read", "Glob", "Grep",
+      "Bash(make check)", "Bash(python:*)", "Bash(python3:*)", "Bash(uv run:*)", "Bash(pytest:*)",
+      "Bash(git status:*)", "Bash(git diff:*)", "Bash(git log:*)", "Bash(git show:*)",
+      "Bash(git ls-files:*)", "Bash(git tag)", "Bash(git rev-parse:*)", "Bash(git merge-base:*)",
+      "Bash(ls:*)", "Bash(cat:*)", "Bash(head:*)", "Bash(tail:*)", "Bash(wc:*)", "Bash(find:*)",
+      "Bash(grep:*)", "Bash(jq:*)", "Bash(shasum:*)", "Bash(zcat:*)", "Bash(gzip -dc:*)",
+      "Bash(sort:*)", "Bash(diff:*)", "Bash(git -C external/:*)"
+    ],
+    "deny": [
+      "Edit", "Write", "NotebookEdit", "WebFetch", "WebSearch",
+      "Read(./.env)", "Read(./.env.*)", "Bash(cat .env*)", "Bash(cat ./.env*)", "Bash(env)", "Bash(printenv:*)",
+      "Bash(make check-live:*)", "Bash(make check-all:*)",
+      "Bash(git add:*)", "Bash(git commit:*)", "Bash(git tag :*)", "Bash(git push:*)", "Bash(git reset:*)",
+      "Bash(git checkout:*)", "Bash(git restore:*)", "Bash(git stash:*)", "Bash(rm:*)", "Bash(mv:*)"
+    ]
+  }
+}
