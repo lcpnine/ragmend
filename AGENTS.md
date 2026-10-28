@@ -5,7 +5,7 @@ Standing rules for any coding agent working in this repo. Read this file and PLA
 
 ## Source of truth
 
-- **PLAN.md is frozen. Never edit it.**
+- **PLAN.md is frozen. Never edit it.** Only the owner revises it, as a new changelog revision.
 - If a plan item turns out to be infeasible, ambiguous, or contradicted by real API or data behavior:
   1. Stop.
   2. Record it under **Open questions** in PROGRESS.md, with evidence (error output, file:line, numbers).
@@ -76,9 +76,11 @@ Primary metrics are computed on the evidence actually **admitted** and given to 
 - **Counterfactual probes:** the probe's follow-up query is generated and retrieved inside the query-time guard. The trusted evaluator then checks, outside the guard, whether it recovered a missing support.
 
 **Held-out**
-- Only the dedicated final-report evaluator (`eval/final_report.py`) can load held-out questions or labels. No optimizer, probe, or pipeline entry point has any option to select held-out data.
+- Only the dedicated final-report evaluator (`eval/final_report.py`) can load held-out questions or labels. No optimizer, probe, pipeline, or CLI entry point has any option to select held-out data.
 - The final-report evaluator refuses to run unless `reports/frozen_selections.json` exists, is committed, and is reachable from the `pre-heldout` tag.
-- It evaluates **only** the predefined baselines and the configurations listed in that file.
+- It evaluates **only** the predefined baselines and the configurations listed in that file, **each unique config hash at most once**, in one session (PLAN.md §7, "Held-out protocol"). An interrupted session resumes only questions with no recorded result. Recorded results, including errors, are never re-run.
+- It refuses to run if execution-path code (`pipeline/`, prompt templates, the lockfile) differs from `pre-heldout`.
+- Held-out results never feed back into selection, A_min, any tolerance, or the outcome rule.
 
 ## Architecture rules
 
@@ -104,11 +106,17 @@ Incomplete responses and API errors are recorded as such and **never** scored as
 - Leak tests inspect captured payloads, not code paths.
 
 **Traces.** Every pipeline run emits a JSON trace with:
-- the config and run mode (Experiment 0 / search)
-- every model call: payload hash, component summary, usage, timestamps
+- the config, its config hash, the run mode (Experiment 0 / search), and the git commit
+- every model call: payload hash, component summary, parsed output (so a run can be replayed, I11), usage, timestamps
 - every retrieval call: query, returned IDs, admitted IDs with tokens and full/partial flag, timestamps
 - the final answer
 - totals: calls, the three token quantities, latency, cost
+
+**Config files and one execution path (from M1)** (PLAN.md §5.5)
+- Every pipeline run is defined by one JSON config file. Its config hash (excluding `provenance`) covers every field of the pipeline-result cache identity except the question ID.
+- Loading is strict. Missing or unknown fields, unknown schema versions, and fingerprint or template-version mismatches are errors. No behavior-affecting setting may come from defaults, environment variables, or globals outside the file. Only secrets come from `.env`.
+- One run function, `run_config`, executes configurations. M1 records its module path in PROGRESS.md. The CLI (`scripts/run_config.py`), the search harness, the Experiment 0 runner, and `eval/final_report.py` all call it. No other code path executes a configuration. Counterfactual probes reuse the retriever, but they are diagnostics, not configuration runs.
+- Selected configurations are written by selection code and never edited after export.
 
 **Caches (two, kept separate)**
 
@@ -122,14 +130,16 @@ Incomplete responses and API errors are recorded as such and **never** scored as
 - generation parameters and token limits
 - execution-policy version
 
+The config file holds every field above except the question ID.
+
 *Evaluation-score cache.* Keyed by:
-- the pipeline-result hash
+- the pipeline-result hash (a hash of the result content, so a re-run that produces a different answer is re-scored)
 - judge model and version, effort
 - judge prompt version and scoring rubric version
 
 **Cache use**
-- Reusing a cached pipeline result across Experiment B arms is intended; the measurement is shared on purpose.
-- Latency repeat runs use `--no-cache`, which bypasses the pipeline-result cache.
+- Reusing a cached pipeline result across Experiment B arms is intended; the measurement is shared on purpose. This includes the shared trial-0 baseline.
+- Latency repeats and Apply's live re-run use `--no-cache`, which neither reads nor overwrites the pipeline-result cache.
 - API-side prompt caching is measured through the cached-token count.
 
 **Splits.** Pilot, validation, and held-out are fixed files created once with a fixed seed. Held-out access follows "Data access boundaries" above.
@@ -153,7 +163,9 @@ Each invariant must have an automated test once the relevant code exists.
 | I7 | Reported latency = end-to-end wall clock from a monotonic timer that wraps the whole run. | Every call interval lies within [0, total]. Do **not** require total ≥ sum of call latencies; calls may overlap. |
 | I8 | Both caches include every field of their identities. | Changing any single field produces a cache miss. |
 | I9 | Retrieval runs over the pooled, deduplicated corpus. | Index size = corpus size. Retrieved IDs can lie outside the question's packaged paragraphs. |
-| I10 | Held-out data is loadable only by the final-report evaluator, only with a committed frozen-selections file reachable from `pre-heldout`, and only for the listed configurations. | Every other entry point fails to load held-out data. The final evaluator refuses when the file is missing, uncommitted, or not reachable from the tag, and refuses any unlisted configuration. |
+| I10 | Held-out data is loadable only by the final-report evaluator, only with a committed frozen-selections file reachable from `pre-heldout`, only for the listed configurations, and at most once per config hash. | Every other entry point, including the CLI, fails to load held-out data. The final evaluator refuses when the file is missing, uncommitted, or not reachable from the tag. It also refuses any unlisted configuration and a second run of a config hash already in its ledger. |
+| I11 | One execution path, and the config file is complete. Search, Experiment 0, the CLI, and the final-report evaluator execute configurations only through `run_config`. Apart from the question, the config file alone determines a run. | Round-trip: load → re-export is byte-identical, and the hash is unchanged. The CLI computes the same pipeline-result cache keys as the harness, so a fresh-process cached run hits 100%. Replaying recorded model outputs reproduces request-payload hashes, retrieval calls, and admitted IDs. A spy test shows every caller reaches `run_config`. Strict loading rejects each missing field, unknown field, and fingerprint mismatch. The final evaluator refuses when execution-path code differs from `pre-heldout`. |
+| I12 | Improvement claims are computed. The outcome label comes only from applying the pre-registered rule (PLAN.md §6, Experiment A) to recorded results. No report or demo view uses improvement language unless the label is `improved`. | Fixture tests for each of the four labels and each deciding step (accuracy bar, latency band, cost). The demo's outcome card renders each label from fixtures. |
 
 ## Testing rules (from M1)
 

@@ -8,6 +8,9 @@ The bugs that would sink this project are not crashes. They are **silent validit
 - mis-mapped evidence IDs
 - a stale cache
 - latency that misses a call
+- a configuration that behaves differently in search than when applied (a second code path, or state outside the config file)
+- held-out results that touch selection, or a configuration evaluated on held-out more than once
+- an improvement claim that the measured results do not support
 
 The review is designed around catching these.
 
@@ -34,7 +37,7 @@ Run the reviewer in a **fresh session** with no builder context. It is read-only
 You are an independent reviewer. You did not write this code. Do not modify any files.
 
 Inputs:
-- PLAN.md (frozen spec), AGENTS.md (rules, decisions D1–D2, invariants I1–I10)
+- PLAN.md (frozen spec), AGENTS.md (rules, decisions D1–D4, invariants I1–I12)
 - MILESTONES.md: milestone <MN> acceptance criteria
 - The builder's report: the <MN> section of PROGRESS.md
 - The change set: `git diff <previous-tag>..HEAD` AND `git status --short`
@@ -63,10 +66,16 @@ Do not trust the builder's report. Verify every claim yourself.
      calls are expected; total < sum of call latencies is NOT a defect.
    - cost computed from model_input_tokens/output_tokens (not from evidence tokens)
    - which capture level the payload artifacts represent (application vs transport)
+   - the trace's config hash differing from the hash of the config file the run claims (I11)
 5. Hunt specifically for:
    - gold data reachable from pipeline/ code, including indirectly through utility
      functions, or gold fields (answers, support IDs, hop counts) in any prompt template (I6)
-   - held-out data reachable without --final-report (I10)
+   - held-out data reachable outside eval/final_report.py, or a config hash
+     evaluated on held-out more than once (I10)
+   - a second execution path: code outside run_config that executes a
+     configuration, or a behavior-affecting setting read from defaults,
+     environment variables, or globals instead of the config file (I11)
+   - improvement language not backed by the computed outcome label (I12)
    - cache keys missing any field of "Cache identity" (I8)
    - reasoning tokens added on top of output_tokens in cost (double counting)
    - incomplete responses or API errors scored as valid answers
@@ -79,9 +88,23 @@ Do not trust the builder's report. Verify every claim yourself.
    what the boundary table allows.
 8. Evidence metrics: are primary metrics computed on ADMITTED evidence, with
    partial (truncated) supports counted as not available?
-9. M5 only: does the `pre-heldout` tag predate every final-report run (check
-   commit order and report timestamps)? Does every evaluated selection match
-   reports/frozen_selections.json exactly?
+9. Apply and held-out (M5 onward):
+   - M5: does reports/frozen_selections.json contain everything the M5
+     acceptance criteria list? Were the
+     designated baseline, the primary seed, and the tolerance recorded before the
+     results they govern (check commit order)? Do the verification results come
+     from real runs (cache-hit counts, the --no-cache results file, the replay
+     log)? Did the live re-run leave the selection unchanged?
+   - M6: does the `pre-heldout` tag predate every final-report run (check
+     commit order and report timestamps)? Does every evaluated configuration
+     match reports/frozen_selections.json exactly, with each config hash run
+     once (ledger)? Is execution-path code identical to `pre-heldout`? Are
+     reports/frozen_selections.json and configs/ unchanged since `pre-heldout`?
+   - M6-M7: recompute the outcome label from the held-out results with the
+     PLAN.md §6 rule. Does any report or demo text claim an improvement without
+     the `improved` label, present validation numbers as held-out, present a
+     live demo run as a measurement, or state the Experiment B hypothesis as a
+     finding beyond what the seeds support?
 
 Output:
 - A verdict table: criterion / invariant -> PASS | FAIL | UNVERIFIED -> evidence
@@ -126,14 +149,14 @@ otherwise REQUEST CHANGES. Be concise.
 
 1. **Read one trace by eye.** From M1 onward, pick a golden question and follow the queries, the retrieved paragraphs, and the answer. For M0, read the golden questions and their supports.
 2. **Read Deviations and Open questions** in PROGRESS.md. Every deviation needs explicit approval or a revert.
-3. **Spot-check one number:** recompute one metric in PROGRESS.md from the raw trace, raw response, or data file.
-4. **Owner decisions:** fork/build (M0), A_min (M2), go/no-go (M3).
+3. **Spot-check one number:** recompute one metric in PROGRESS.md from the raw trace, raw response, or data file. From M6 on, also recompute the outcome label by hand from the held-out results.
+4. **Owner decisions:** fork/build and the designated baseline (M0), A_min and B (M2), go/no-go and the reproduction tolerance (M3), and the freeze (M5).
 
 **Owner-decision handoff (every milestone)**
 1. The builder commits its work and requests review (clean tree).
 2. The independent reviewer approves (Gate 2).
 3. The owner completes Gate 3, records any decision or waiver in PROGRESS.md, and commits it.
-4. Verify `git status --short` is clean, then run `git tag mN-done`.
+4. Verify `git status --short` is clean, then run `git tag mN-done`. After M5, also tag `pre-heldout` on the same commit. Only the owner creates tags.
 5. Start the next milestone from that tag.
 
 ---
@@ -152,7 +175,7 @@ The three MuSiQue questions (2-, 3-, and 4-hop) are selected from the pilot spli
 
 | Severity | Examples | Action |
 |---|---|---|
-| **Validity-breaking** | Information leak into the control, evidence missing from the final answer, gold or held-out data reachable, budget not enforced, wrong evidence mapping | Block; fix first |
-| **Measurement** | Latency misses a call, reasoning tokens double counted, errors scored as answers, stale cache | Block |
+| **Validity-breaking** | Information leak into the control, evidence missing from the final answer, gold or held-out data reachable, budget not enforced, wrong evidence mapping, held-out results used for any selection or tolerance, a configuration evaluated on held-out twice, a second execution path or state outside the config file, an improvement claim without the computed `improved` label | Block; fix first |
+| **Measurement** | Latency misses a call, reasoning tokens double counted, errors scored as answers, stale cache, Apply verification missing or judged against a tolerance fixed after the fact | Block |
 | **Scope / deviation** | An unlisted PLAN.md change, an extra feature, uncommitted files | Revert or approve explicitly |
 | **Quality** | Messy code, missing docstring | Note it; fix only if cheap |
